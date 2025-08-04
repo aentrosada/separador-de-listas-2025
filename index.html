@@ -104,7 +104,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>✨DIVISOR DE LISTAS ✨</h1>
+    <h1>💅 DIVISOR DE LISTAS 💅</h1>
 
     <label for="arquivo">1. Selecione o arquivo (.xlsx):</label>
     <input type="file" id="arquivo" accept=".xlsx" required />
@@ -161,14 +161,20 @@
         const zip = new JSZip();
         const nomeBase = file.name.replace(/\.xlsx$/, "");
 
-        for (let i = 0; i < jsonData.length; i += tamanhoLote) {
-          const parte = jsonData.slice(i, i + tamanhoLote);
+        // Cabeçalho
+        const cabecalho = jsonData[0];
+
+        // Ajuste para que o conteúdo de cada parte seja o tamanho desejado menos 1
+        const linhasPorParte = tamanhoLote - 1;
+
+        for (let i = 1; i < jsonData.length; i += linhasPorParte) {
+          const parte = [cabecalho, ...jsonData.slice(i, i + linhasPorParte)];
           const novaPlanilha = XLSX.utils.aoa_to_sheet(parte);
           const novoWorkbook = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(novoWorkbook, novaPlanilha, "Planilha");
 
           const arrayBuffer = XLSX.write(novoWorkbook, { bookType: "xlsx", type: "array" });
-          zip.file(`${nomeBase}_parte_${Math.floor(i / tamanhoLote) + 1}.xlsx`, arrayBuffer);
+          zip.file(`${nomeBase}_parte_${Math.floor(i / linhasPorParte) + 1}.xlsx`, arrayBuffer);
         }
 
         const conteudoZip = await zip.generateAsync({ type: "blob" });
