@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>DIVISOR DE LISTAS</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+      max-width: 480px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 28px;
+      color: #b53d44;
+    }
+
+    label {
+      font-weight: 600;
+      margin-top: 20px;
+      display: block;
+      color: #333;
+    }
+
+    input[type="file"],
+    input[type="number"] {
+      margin-top: 8px;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      background-color: #f9f9f9;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background-color: #b53d44;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold; /* Negrito */
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #9b2f36;
+    }
+
+    #resultado {
+      margin-top: 20px;
+      font-size: 16px;
+      text-align: center;
+      color: #333;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+    }
+
+    footer a {
+      color: #b53d44;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✨DIVISOR DE LISTAS ✨</h1>
+
+    <label for="arquivo">1. Selecione o arquivo (.xlsx):</label>
+    <input type="file" id="arquivo" accept=".xlsx" required />
+
+    <label for="tamanho">2. Tamanho de cada parte (linhas):</label>
+    <input type="number" id="tamanho" min="1" placeholder="Ex: 1500" required />
+
+    <button onclick="dividirExcel()">DIVIDIR E BAIXAR</button>
+
+    <div id="resultado"></div>
+  </div>
+
+  <footer>
+    <p>© 2025. TERMINE SEUS ESTUDOS por <strong>Thainá Cecília</strong></p>
+  </footer>
+
+  <script>
+    async function dividirExcel() {
+      const inputArquivo = document.getElementById('arquivo');
+      const inputTamanho = document.getElementById('tamanho');
+      const resultado = document.getElementById('resultado');
+
+      if (!inputArquivo.files[0]) {
+        resultado.innerText = "❌ Selecione um arquivo Excel.";
+        return;
+      }
+
+      const tamanhoLote = parseInt(inputTamanho.value);
+      if (isNaN(tamanhoLote) || tamanhoLote <= 0) {
+        resultado.innerText = "❌ Informe um número válido de linhas.";
+        return;
+      }
+
+      resultado.innerText = "⏳ Processando...";
+
+      try {
+        const file = inputArquivo.files[0];
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        if (!worksheet) {
+          throw new Error("❌ A planilha está vazia ou não foi carregada corretamente.");
+        }
+
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (jsonData.length === 0) {
+          throw new Error("❌ Não há dados na planilha.");
+        }
+
+        const zip = new JSZip();
+        const nomeBase = file.name.replace(/\.xlsx$/, "");
+
+        for (let i = 0; i < jsonData.length; i += tamanhoLote) {
+          const parte = jsonData.slice(i, i + tamanhoLote);
+          const novaPlanilha = XLSX.utils.aoa_to_sheet(parte);
+          const novoWorkbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(novoWorkbook, novaPlanilha, "Planilha");
+
+          const arrayBuffer = XLSX.write(novoWorkbook, { bookType: "xlsx", type: "array" });
+          zip.file(`${nomeBase}_parte_${Math.floor(i / tamanhoLote) + 1}.xlsx`, arrayBuffer);
+        }
+
+        const conteudoZip = await zip.generateAsync({ type: "blob" });
+        saveAs(conteudoZip, `${nomeBase}_dividido.zip`);
+        resultado.innerHTML = "✅ Arquivo dividido com sucesso!";
+      } catch (err) {
+        resultado.innerHTML = `❌ Erro ao processar o arquivo: ${err.message}`;
+        console.error("Erro ao processar o arquivo:", err);
+      }
+    }
+  </script>
+</body>
+</html>
